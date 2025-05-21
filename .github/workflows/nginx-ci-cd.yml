@@ -1,21 +1,25 @@
 name: Nginx Docker Build and Deploy
 
 on:
-  push:
-    branches:
-      - "main"             # for production
-  pull_request:
-    branches:
-      - main              # for staging
-    types: [opened, reopened, ready_for_review, synchronize]
   workflow_run:
     workflows: ["Git Commit Lint"]
-    types:
-      - completed
+    types: [completed]
+
+  pull_request:
+    branches:
+      - main
+    types: [opened, reopened, synchronize, ready_for_review]
+
+  push:
+    branches:
+      - main
 
 
 jobs:
   build-development:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch != 'main'
     runs-on: bka-label
     timeout-minutes: 5
     environment: dockerhub-registry
