@@ -66,5 +66,6 @@ jobs:
       - name: Lint latest commit
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "🔍 Linting commit: $COMMIT_MSG"
+          echo "Linting commit: $COMMIT_MSG"
           echo "$COMMIT_MSG" | npx commitlint
+          echo "Commit message passed lint and follows Conventional Commit format"
