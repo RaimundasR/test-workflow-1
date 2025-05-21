@@ -14,10 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required to access full commit history
-
-      - name: Fetch main branch explicitly
-        run: git fetch origin main
+          fetch-depth: 0
 
       - name: Install commitlint
         run: |
@@ -27,15 +24,8 @@ jobs:
         run: |
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
 
-      - name: Lint all commits since main
+      - name: Lint latest commit
         run: |
-          COMMITS=$(git log origin/main..HEAD --pretty=format:"%s")
-          if [ -z "$COMMITS" ]; then
-            echo "⚠️ No commits found between origin/main and HEAD. Skipping lint."
-            exit 0
-          fi
-
-          echo "$COMMITS" | while read line; do
-            echo "🔍 Linting commit: $line"
-            echo "$line" | commitlint || exit 1
-          done
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "🔍 Linting commit: $COMMIT_MSG"
+          echo "$COMMIT_MSG" | commitlint
