@@ -1,0 +1,31 @@
+name: Git Commit Lint
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'features/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install commitlint
+        run: |
+          npm install -g @commitlint/cli @commitlint/config-conventional
+
+      - name: Create commitlint config
+        run: |
+          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+
+      - name: Lint commit messages
+        run: |
+          COMMITS=$(git log origin/main..HEAD --pretty=format:"%s")
+          echo "$COMMITS" | while read line; do
+            echo "$line" | commitlint || exit 1
+          done
