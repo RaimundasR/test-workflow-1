@@ -14,34 +14,31 @@ on:
     branches:
       - main
 
-
 jobs:
   build-development:
     if: >
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch != 'main'
     runs-on: bka-label
     timeout-minutes: 5
     environment: dockerhub-registry
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     outputs:
       DOCKER_TAG: ${{ steps.docker_tag_step.outputs.DOCKER_TAG }}
     steps:
-
       - name: Checkout the Latest Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: Define Docker Image Name
         run: |
           IMAGE_NAME="$DOCKER_USERNAME/my-nginx-app"
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "✅ IMAGE_NAME set to: $IMAGE_NAME"
 
       - name: Ensure Directory Exists for Docker Version
         run: |
@@ -62,7 +59,6 @@ jobs:
           fi
           echo "v$NEXT_VERSION" > "$VERSION_FILE"
           echo "DOCKER_TAG=v$NEXT_VERSION" >> $GITHUB_ENV
-          echo "✅ DOCKER_TAG set to: v$NEXT_VERSION"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -88,7 +84,6 @@ jobs:
     timeout-minutes: 5
     environment: dockerhub-registry
     needs: build-development
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -120,15 +115,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Get Latest v<num> Docker Tag
         run: |
           IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/my-nginx-app"
           DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=20" | \
           jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "✅ Using latest Docker tag: $DOCKER_TAG"
 
       - name: Pull and Run Latest Staging Image
         run: |
@@ -150,15 +146,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Get Latest v<num> Docker Tag
         run: |
           IMAGE_NAME="${{ secrets.DOCKER_USERNAME }}/my-nginx-app"
           DOCKER_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${IMAGE_NAME}/tags?page_size=20" | \
           jq -r '[.results[] | select(.name | test("^v[0-9]+$"))] | sort_by(.last_updated) | reverse | .[0].name')
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "✅ Using latest Docker tag: $DOCKER_TAG"
 
       - name: Pull and Run Latest Production Image
         run: |
@@ -168,4 +165,3 @@ jobs:
           docker rm -f nginx-prod || true
           docker rmi -f $(docker images -q "$IMAGE_NAME") || true
           docker run -d --name nginx-prod -p 8080:80 "$IMAGE_NAME:$DOCKER_TAG"
-
