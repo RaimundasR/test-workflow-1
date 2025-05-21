@@ -3,13 +3,16 @@ name: Nginx Docker Build and Deploy
 on:
   push:
     branches:
-      - "features/**"
-      - "feature/**"
-      - main
+      - "main"             # for production
   pull_request:
     branches:
-      - main
-    types: [opened, reopened, ready_for_review]
+      - main              # for staging
+    types: [opened, reopened, ready_for_review, synchronize]
+  workflow_run:
+    workflows: ["Git Commit Lint"]
+    types:
+      - completed
+
 
 jobs:
   build-development:
